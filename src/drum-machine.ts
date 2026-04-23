@@ -96,6 +96,7 @@ interface TrackState {
 }
 
 type SampleCollectionId = "synth" | "openSamples";
+const DEFAULT_COLLECTION: SampleCollectionId = "openSamples";
 
 interface PresetTemplate {
   id: string;
@@ -1291,7 +1292,7 @@ function addInstrument(instrumentId: InstrumentId) {
 
   state.tracks.push({
     instrumentId,
-    collectionId: "synth",
+    collectionId: DEFAULT_COLLECTION,
     volume: 0.9,
     mute: false,
     solo: false,
@@ -1375,7 +1376,7 @@ function createBlankPreset() {
     denominator: 4,
     tracks: DEFAULT_INSTRUMENTS.map((instrumentId) => ({
       instrumentId,
-      collectionId: "synth",
+      collectionId: DEFAULT_COLLECTION,
       volume: 0.9,
       mute: false,
       solo: false,
@@ -1605,7 +1606,7 @@ function resizeSteps(steps: boolean[], newLength: number) {
 function cloneTracks(tracks: TrackState[], targetLength: number) {
   return tracks.map((track) => ({
     ...track,
-    collectionId: track.collectionId ?? "synth",
+    collectionId: track.collectionId ?? DEFAULT_COLLECTION,
     steps: resizeSteps(track.steps, targetLength),
   }));
 }
@@ -1717,7 +1718,7 @@ function track(
 
   return {
     instrumentId,
-    collectionId: "synth",
+    collectionId: DEFAULT_COLLECTION,
     volume,
     mute: options?.mute ?? false,
     solo: options?.solo ?? false,
