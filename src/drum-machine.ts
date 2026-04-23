@@ -1581,10 +1581,6 @@ function playCollectionInstrument(
   return true;
 }
 
-async function preloadSample(instrumentId: InstrumentId) {
-  return preloadSampleForCollection("openSamples", instrumentId);
-}
-
 async function preloadSampleForCollection(collectionId: Exclude<SampleCollectionId, "synth">, instrumentId: InstrumentId) {
   const samplePath = getSamplePath(collectionId, instrumentId);
   if (!samplePath) {
