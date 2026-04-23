@@ -313,7 +313,7 @@ select {
 
 .track-row {
   display: grid;
-  grid-template-columns: 90px 112px 28px 28px 60px minmax(0, 1fr) 22px;
+  grid-template-columns: 90px 132px 28px 28px 60px minmax(0, 1fr) 22px;
   align-items: center;
   gap: 8px;
   padding: 5px 0;
@@ -357,6 +357,10 @@ select {
   padding: 0 6px;
   font-size: 10px;
   font-family: var(--mono);
+}
+
+.collection-select {
+  display: block;
 }
 
 .toggle-inline {

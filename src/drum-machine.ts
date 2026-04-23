@@ -1051,7 +1051,6 @@ function renderApp() {
       if (!instrument) {
         return "";
       }
-
       const stepButtons = track.steps
         .map((active, stepIndex) => {
           const isPlaying = stepIndex === state.currentStep && state.isPlaying;
