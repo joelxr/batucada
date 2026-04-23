@@ -95,7 +95,7 @@ interface TrackState {
   steps: boolean[];
 }
 
-type SampleCollectionId = "synth" | "openSamples";
+type SampleCollectionId = "synth" | "openSamples" | "virtuosityPerc";
 const DEFAULT_COLLECTION: SampleCollectionId = "openSamples";
 
 interface PresetTemplate {
@@ -155,6 +155,7 @@ const DEFAULT_INSTRUMENTS: InstrumentId[] = [
 const SAMPLE_COLLECTIONS: Array<{ id: SampleCollectionId; label: string }> = [
   { id: "synth", label: "Synth" },
   { id: "openSamples", label: "Open Samples" },
+  { id: "virtuosityPerc", label: "Virtuosity Perc" },
 ];
 
 let audioContext: AudioContext | null = null;
@@ -174,7 +175,50 @@ const OPEN_SAMPLE_MAP: Partial<Record<InstrumentId, string>> = {
   tomHigh: "/samples/open-samples/tom-high.wav",
   tomLow: "/samples/open-samples/tom-low.wav",
   clap: "/samples/open-samples/clap.wav",
+  caixa: "/samples/open-samples/snare.wav",
+  surdo: "/samples/open-samples/tom-low.wav",
 };
+
+const VIRTUOSITY_PERC_SAMPLE_MAP: Partial<Record<InstrumentId, string>> = {
+  agogoHigh: "/samples/virtuosity-perc/agogo-high.wav",
+  agogoLow: "/samples/virtuosity-perc/agogo-low.wav",
+  cowbell: "/samples/virtuosity-perc/cowbell.wav",
+  shaker: "/samples/virtuosity-perc/shaker.wav",
+  tambourine: "/samples/virtuosity-perc/tambourine.wav",
+  triangle: "/samples/virtuosity-perc/triangle.wav",
+  clave: "/samples/virtuosity-perc/clave.wav",
+  congaOpen: "/samples/virtuosity-perc/conga-open.wav",
+  congaSlap: "/samples/virtuosity-perc/conga-slap.wav",
+  timbal: "/samples/virtuosity-perc/bongo-high.wav",
+  ganza: "/samples/virtuosity-perc/cabasa.wav",
+  recoReco: "/samples/virtuosity-perc/guiro-fast.wav",
+  woodBlock: "/samples/virtuosity-perc/woodblock-hi.wav",
+  caixa: "/samples/virtuosity-perc/caixa.flac",
+  surdo: "/samples/virtuosity-perc/surdo.flac",
+};
+
+const COLLECTION_SAMPLE_MAPS: Record<Exclude<SampleCollectionId, "synth">, Partial<Record<InstrumentId, string>>> = {
+  openSamples: OPEN_SAMPLE_MAP,
+  virtuosityPerc: VIRTUOSITY_PERC_SAMPLE_MAP,
+};
+
+function getSamplePath(
+  collectionId: Exclude<SampleCollectionId, "synth">,
+  instrumentId: InstrumentId,
+) {
+  return COLLECTION_SAMPLE_MAPS[collectionId]?.[instrumentId] ?? null;
+}
+
+function collectionSupportsInstrument(
+  collectionId: SampleCollectionId,
+  instrumentId: InstrumentId,
+) {
+  if (collectionId === "synth") {
+    return true;
+  }
+
+  return Boolean(getSamplePath(collectionId, instrumentId));
+}
 
 const instrumentLibrary: InstrumentDefinition[] = [
   {
@@ -971,9 +1015,12 @@ function bindEventListeners() {
         return;
       }
 
-      track.collectionId = target.value as SampleCollectionId;
-      if (track.collectionId === "openSamples") {
-        void preloadSample(track.instrumentId);
+      const nextCollectionId = target.value as SampleCollectionId;
+      track.collectionId = collectionSupportsInstrument(nextCollectionId, track.instrumentId)
+        ? nextCollectionId
+        : "synth";
+      if (track.collectionId !== "synth") {
+        void preloadSampleForCollection(track.collectionId, track.instrumentId);
       }
       renderApp();
       return;
@@ -1052,6 +1099,9 @@ function renderApp() {
       if (!instrument) {
         return "";
       }
+      const availableCollections = SAMPLE_COLLECTIONS.filter((collection) =>
+        collectionSupportsInstrument(collection.id, track.instrumentId),
+      );
       const stepButtons = track.steps
         .map((active, stepIndex) => {
           const isPlaying = stepIndex === state.currentStep && state.isPlaying;
@@ -1078,7 +1128,7 @@ function renderApp() {
 
           <label class="collection-select">
             <select data-track-collection="${trackIndex}">
-              ${SAMPLE_COLLECTIONS.map(
+              ${availableCollections.map(
                 (collection) => `
                   <option value="${collection.id}" ${track.collectionId === collection.id ? "selected" : ""}>
                     ${collection.label}
@@ -1275,6 +1325,11 @@ function applyPresetById(presetId: string) {
 
   const wasPlaying = state.isPlaying;
   const nextState = createStateFromPreset(preset);
+  for (const track of nextState.tracks) {
+    if (track.collectionId !== "synth") {
+      void preloadSampleForCollection(track.collectionId, track.instrumentId);
+    }
+  }
   state = {
     ...nextState,
     isPlaying: wasPlaying,
@@ -1507,18 +1562,18 @@ function playCollectionInstrument(
   time: number,
   velocity: number,
 ) {
-  if (track.collectionId !== "openSamples") {
+  if (track.collectionId === "synth") {
     return false;
   }
 
-  const samplePath = OPEN_SAMPLE_MAP[track.instrumentId];
+  const samplePath = getSamplePath(track.collectionId, track.instrumentId);
   if (!samplePath) {
     return false;
   }
 
   const cached = sampleBufferCache.get(samplePath);
   if (!cached) {
-    void preloadSample(track.instrumentId);
+    void preloadSampleForCollection(track.collectionId, track.instrumentId);
     return false;
   }
 
@@ -1527,7 +1582,11 @@ function playCollectionInstrument(
 }
 
 async function preloadSample(instrumentId: InstrumentId) {
-  const samplePath = OPEN_SAMPLE_MAP[instrumentId];
+  return preloadSampleForCollection("openSamples", instrumentId);
+}
+
+async function preloadSampleForCollection(collectionId: Exclude<SampleCollectionId, "synth">, instrumentId: InstrumentId) {
+  const samplePath = getSamplePath(collectionId, instrumentId);
   if (!samplePath) {
     return null;
   }
